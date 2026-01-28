@@ -1,0 +1,21 @@
+services:
+  bot:
+    networks:
+      - shop_net
+    container_name:
+      shop_bot
+    build:
+      context:
+        .
+    image:
+      shop_bot
+    env_file:
+      - .env
+    develop:
+      watch:
+        - action: sync
+          path: .
+          target: /app
+networks:
+  shop_net:
+    external: true
