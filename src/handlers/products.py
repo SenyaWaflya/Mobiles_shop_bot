@@ -2,10 +2,12 @@ from aiogram import F, Router
 from aiogram.fsm.context import FSMContext
 from aiogram.types import CallbackQuery, Message
 
-from src.api.products import ProductsApi
+from src.api.file_storage.files import FilesApi
+from src.api.shop_backend.products import ProductsApi
 from src.callbacks.brand import BrandCallback
 from src.callbacks.product import ProductCallback
 from src.kb import brands_kb, product_kb, products_kb
+from src.utils.files import file_bytes_to_photo
 
 products_router = Router(name='products')
 
@@ -31,9 +33,17 @@ async def close_brands(callback: CallbackQuery) -> None:
 async def open_product(callback: CallbackQuery, callback_data: ProductCallback, state: FSMContext) -> None:
     await callback.answer()
     product = await ProductsApi.get(callback_data.id)
-    await state.update_data(brand=product['brand'], product_id=product['id'])
-    await callback.message.edit_text(
-        text=f'Фирма: {product["brand"]}\nМодель: {product["title"]}\nЦена: {product["price"]}',
+    product_image_bytes = await FilesApi.get(product.image_path)
+    product_image = await file_bytes_to_photo(file_bytes=product_image_bytes, title=product.title)
+    await state.update_data(brand=product.brand, product_id=product.id)
+    await callback.message.answer_photo(
+        photo=product_image,
+        caption=(
+            f'Фирма: {product.brand}\n'
+            f'Модель: {product.title}\n'
+            f'Цена: {product.price}\n'
+            f'Количество на складе: {product.quantity}'
+        ),
         reply_markup=product_kb,
     )
 

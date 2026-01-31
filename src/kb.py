@@ -6,7 +6,7 @@ from aiogram.utils.keyboard import (
     ReplyKeyboardBuilder,
 )
 
-from src.api.products import ProductsApi
+from src.api.shop_backend.products import ProductsApi
 from src.callbacks.brand import BrandCallback
 from src.callbacks.product import ProductCallback
 
