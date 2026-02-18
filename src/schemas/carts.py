@@ -18,3 +18,8 @@ class Cart(BaseModel):
     status: str
     user: UserResponse
     items: list[CartItem]
+
+
+class CartItemDto(BaseModel):
+    product_id: int
+    quantity: int

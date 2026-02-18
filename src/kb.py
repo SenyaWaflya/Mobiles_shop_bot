@@ -8,6 +8,7 @@ from aiogram.utils.keyboard import (
 
 from src.api.shop_backend.products import ProductsApi
 from src.callbacks.brand import BrandCallback
+from src.callbacks.cart import CartCallback
 from src.callbacks.product import ProductCallback
 
 catalog = KeyboardButton(text='Каталог 🔍')
@@ -16,9 +17,14 @@ cart = KeyboardButton(text='Корзина 🛒')
 contacts = KeyboardButton(text='Контакты ℹ️')
 main_kb = ReplyKeyboardBuilder([[catalog], [profile, cart], [contacts]]).as_markup(resize_keyboard=True)
 
-to_cart = InlineKeyboardButton(text='Добавить в корзину 🛒', callback_data='to_cart')
-back = InlineKeyboardButton(text='Назад ⏪', callback_data=ProductCallback(id=0, action='back').pack())
-product_kb = InlineKeyboardBuilder().row(to_cart, back).as_markup()
+
+async def product_kb(product_id: int) -> InlineKeyboardMarkup:
+    builder = InlineKeyboardBuilder()
+    to_cart = InlineKeyboardButton(
+        text='Добавить в корзину 🛒', callback_data=ProductCallback(id=product_id, action='to_cart').pack()
+    )
+    back = InlineKeyboardButton(text='Назад ⏪', callback_data=ProductCallback(id=0, action='back').pack())
+    return builder.row(to_cart, back).as_markup()
 
 
 async def brands_kb() -> InlineKeyboardMarkup:
@@ -26,7 +32,7 @@ async def brands_kb() -> InlineKeyboardMarkup:
     brands = await ProductsApi.get_brands()
     for brand in brands:
         builder.button(text=brand, callback_data=BrandCallback(title=brand, action='open'))
-    return builder.adjust(2).as_markup()
+    return builder.adjust(1).as_markup()
 
 
 async def products_kb(brand: str) -> InlineKeyboardMarkup:
@@ -39,4 +45,19 @@ async def products_kb(brand: str) -> InlineKeyboardMarkup:
                 callback_data=ProductCallback(id=product.id, action='open'),
             )
     builder.row(InlineKeyboardButton(text='Назад ⏪', callback_data=BrandCallback(title='all', action='back').pack()))
+    return builder.adjust(1).as_markup()
+
+
+async def quantity_of_product_kb(product_id: int) -> InlineKeyboardMarkup:
+    builder = InlineKeyboardBuilder()
+    product = await ProductsApi.get(product_id=product_id)
+    for i in range(product.quantity):
+        builder.button(
+            text=str(i + 1), callback_data=CartCallback(product_id=product_id, quantity=i + 1, action='add_to_cart')
+        )
+    builder.row(
+        InlineKeyboardButton(
+            text='Назад ⏪', callback_data=CartCallback(product_id=product_id, quantity=0, action='back').pack()
+        )
+    )
     return builder.as_markup()

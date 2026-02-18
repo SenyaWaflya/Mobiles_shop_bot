@@ -9,10 +9,7 @@ class UsersApi:
     async def add(user_dto: UserDto) -> UserResponse | None:
         user_dto = user_dto.model_dump()
         async with AsyncClient() as client:
-            resp = await client.post(
-                url=f'{settings.SHOP_BACKEND_API_URL}/users/register',
-                json=user_dto
-            )
+            resp = await client.post(url=f'{settings.SHOP_BACKEND_API_URL}/users/register', json=user_dto)
             if resp.status_code == _status_codes.code.CONFLICT:
                 return None
             return UserResponse.model_validate(resp.json())
