@@ -1,4 +1,3 @@
-from pyexpat.errors import messages
 
 from aiogram import F, Router
 from aiogram.fsm.context import FSMContext
@@ -74,8 +73,10 @@ async def close_product(callback: CallbackQuery, state: FSMContext) -> None:
 @products_router.callback_query(ProductCallback.filter(F.action == 'to_cart'))
 async def open_to_cart(callback: CallbackQuery, callback_data: ProductCallback) -> None:
     await callback.answer()
+    user_id = (await UsersApi.get(callback.from_user.id)).id
     await callback.message.edit_caption(
-        caption='Выберите количество товара:', reply_markup=await quantity_of_product_kb(product_id=callback_data.id)
+        caption='Выберите количество товара:',
+        reply_markup=await quantity_of_product_kb(product_id=callback_data.id, user_id=user_id),
     )
 
 
@@ -103,6 +104,5 @@ async def add_to_cart(callback: CallbackQuery, callback_data: CartCallback) -> N
 
     catalog_photo = await get_static_photo('catalog_icon.png')
     await callback.message.edit_media(
-        media=InputMediaPhoto(media=catalog_photo, caption='Выберите фирму устройства'),
-        reply_markup=await brands_kb()
+        media=InputMediaPhoto(media=catalog_photo, caption='Выберите фирму устройства'), reply_markup=await brands_kb()
     )

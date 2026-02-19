@@ -6,6 +6,7 @@ from aiogram.utils.keyboard import (
     ReplyKeyboardBuilder,
 )
 
+from src.api.shop_backend.carts import CartsApi
 from src.api.shop_backend.products import ProductsApi
 from src.callbacks.brand import BrandCallback
 from src.callbacks.cart import CartCallback
@@ -48,13 +49,23 @@ async def products_kb(brand: str) -> InlineKeyboardMarkup:
     return builder.adjust(1).as_markup()
 
 
-async def quantity_of_product_kb(product_id: int) -> InlineKeyboardMarkup:
+async def quantity_of_product_kb(product_id: int, user_id: int) -> InlineKeyboardMarkup:
     builder = InlineKeyboardBuilder()
-    product = await ProductsApi.get(product_id=product_id)
-    for i in range(product.quantity):
-        builder.button(
-            text=str(i + 1), callback_data=CartCallback(product_id=product_id, quantity=i + 1, action='add_to_cart')
-        )
+    active_cart = await CartsApi.get_active(user_id=user_id)
+    if active_cart is None:
+        product = await ProductsApi.get(product_id=product_id)
+        for i in range(product.quantity):
+            builder.button(
+                text=str(i + 1), callback_data=CartCallback(product_id=product_id, quantity=i + 1, action='add_to_cart')
+            )
+    else:
+        for item in active_cart.items:
+            if item.product.id == product_id:
+                for i in range(item.product.quantity - item.quantity):
+                    builder.button(
+                        text=str(i + 1),
+                        callback_data=CartCallback(product_id=product_id, quantity=i + 1, action='add_to_cart'),
+                    )
     builder.row(
         InlineKeyboardButton(
             text='Назад ⏪', callback_data=CartCallback(product_id=product_id, quantity=0, action='back').pack()
