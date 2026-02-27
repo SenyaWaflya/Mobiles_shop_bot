@@ -22,3 +22,19 @@ class CartsApi:
             resp.raise_for_status()
             cart_item = CartItem.model_validate(resp.json())
             return cart_item
+
+    @staticmethod
+    async def delete_from_cart(user_id: int, product_id: int) -> CartItem:
+        async with AsyncClient() as client:
+            resp = await client.delete(url=f'{settings.SHOP_BACKEND_API_URL}/carts/{user_id}/{product_id}')
+            resp.raise_for_status()
+            cart_item = CartItem.model_validate(resp.json())
+            return cart_item
+
+    @staticmethod
+    async def delete_cart(user_id: int) -> Cart:
+        async with AsyncClient() as client:
+            resp = await client.delete(url=f'{settings.SHOP_BACKEND_API_URL}/carts/{user_id}')
+            resp.raise_for_status()
+            cart = Cart.model_validate(resp.json())
+            return cart

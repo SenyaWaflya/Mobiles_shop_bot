@@ -28,11 +28,12 @@ async def show_cart(message: Message, state: FSMContext) -> None:
                 'brand': item.product.brand,
                 'image_path': item.product.image_path,
                 'quantity': item.quantity,
+                'product_id': item.product_id,
             }
             for item in user_cart.items
         ]
         await state.set_state(CartState.items)
-        await state.update_data(items=items, current_index=0)
+        await state.update_data(items=items, current_index=0, user_id=user_cart.user_id)
         image_bytes = await FilesApi.get(user_cart.items[0].product.image_path)
         image = await file_bytes_to_photo(image_bytes, title=user_cart.items[0].product.title)
         await message.answer_photo(
@@ -44,7 +45,7 @@ async def show_cart(message: Message, state: FSMContext) -> None:
                 f'Всего: {user_cart.items[0].product.price * user_cart.items[0].quantity}\n\n'
                 f'Страница 1 из {len(user_cart.items)}'
             ),
-            reply_markup=cart_kb
+            reply_markup=cart_kb,
         )
 
 
@@ -69,9 +70,9 @@ async def next_item(callback: CallbackQuery, state: FSMContext) -> None:
                     f'Цена за штуку: {item.price}\n'
                     f'Всего: {item.price * item.quantity}\n\n'
                     f'Страница {current_index + 1} из {len(cart_data.items)}'
-                )
+                ),
             ),
-            reply_markup=cart_kb
+            reply_markup=cart_kb,
         )
 
 
@@ -96,6 +97,47 @@ async def prev_item(callback: CallbackQuery, state: FSMContext) -> None:
                     f'Цена за штуку: {item.price}\n'
                     f'Всего: {item.price * item.quantity}\n\n'
                     f'Страница {current_index + 1} из {len(cart_data.items)}'
+                ),
+            ),
+            reply_markup=cart_kb,
+        )
+
+
+@carts_router.callback_query(CartCallback.filter(F.action == 'delete'))
+async def delete_item(callback: CallbackQuery, state: FSMContext) -> None:
+    await callback.answer(text='Товар удалён из корзины', show_alert=True)
+    cart_data = CartStateData.model_validate(await state.get_data())
+    product_id = cart_data.items[cart_data.current_index].product_id
+    await CartsApi.delete_from_cart(user_id=cart_data.user_id, product_id=product_id)
+
+    user_cart = await CartsApi.get_active(user_id=cart_data.user_id)
+    if not user_cart.items:
+        await callback.message.delete()
+        await CartsApi.delete_cart(user_id=cart_data.user_id)
+    else:
+        items = [
+            {
+                'title': item.product.title,
+                'price': item.product.price,
+                'brand': item.product.brand,
+                'image_path': item.product.image_path,
+                'quantity': item.quantity,
+                'product_id': item.product_id,
+            }
+            for item in user_cart.items
+        ]
+        await state.update_data(items=items, current_index=0, user_id=user_cart.user_id)
+        image_bytes = await FilesApi.get(user_cart.items[0].product.image_path)
+        image = await file_bytes_to_photo(image_bytes, title=user_cart.items[0].product.title)
+        await callback.message.edit_media(
+            media=InputMediaPhoto(
+                media=image,
+                caption=(
+                    f'{user_cart.items[0].product.brand} {user_cart.items[0].product.title}\n'
+                    f'Количество: {user_cart.items[0].quantity}\n'
+                    f'Цена за штуку: {user_cart.items[0].product.price}\n'
+                    f'Всего: {user_cart.items[0].product.price * user_cart.items[0].quantity}\n\n'
+                    f'Страница 1 из {len(user_cart.items)}'
                 ),
             ),
             reply_markup=cart_kb,

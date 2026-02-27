@@ -31,8 +31,10 @@ class CartItemState(BaseModel):
     brand: str
     image_path: str
     quantity: int
+    product_id: int
 
 
 class CartStateData(BaseModel):
     items: list[CartItemState]
     current_index: int
+    user_id: int
